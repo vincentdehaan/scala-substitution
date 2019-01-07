@@ -13,10 +13,11 @@ object SubstitutionMacros {
 
     object definitionSearcher extends Transformer {
       override def transform(tree: Tree): Tree = tree match {
-        case q"def $tname($arg1): $tpe = $expr" =>
+        case q"def $tname[..$tp]($arg1): $tpe = $expr" =>
           arg1 match {
             case ValDef(_, TermName(arg1name), _, _) =>
               defs(tname.toString) = (expr.toString, arg1name)
+              println(tname)
               tree
           }
         case _ => super.transform(tree)
@@ -24,9 +25,8 @@ object SubstitutionMacros {
     }
 
     object substitionTransformer extends Transformer {
-      val defTable = scala.collection.mutable.Map[String, String]()
       override def transform(tree: Tree): Tree = tree match {
-        case q"$f($arg1)" if !f.toString.contains(".") => // TODO: get rid of this ugly workardound!
+        case q"$f[..$tp]($arg1)" if !f.toString.contains(".") => // TODO: get rid of this ugly workardound!
           val t = q"""
            printall($arg1)($f, ${f.toString}, ${defs(f.toString)._1}, ${defs(f.toString)._2})
             """
