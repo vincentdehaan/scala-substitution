@@ -4,6 +4,9 @@ import scala.tools.nsc.Global
 import scala.tools.nsc.Phase
 import scala.tools.nsc.plugins._
 import scala.tools.nsc.transform._
+import scala.tools.nsc.ast.TreeBrowsers
+import scala.collection.mutable
+
 class CompilerPlugin(override val global: Global)
   extends Plugin {
   override val name = "compiler-plugin"
@@ -24,18 +27,34 @@ class CompilerPluginComponent(val global: Global)
     }
   class MyTypingTransformer(unit: CompilationUnit)
     extends TypingTransformer(unit) {
+    val annotatedApplies = mutable.Set[Tree]()
     override def transform(tree: Tree) = tree match {
-      case Typed(Apply(a, b), tpt) => {
-        println("typedapply")
-        println(a.getClass.getName)
-        //println(a.qualifier.getClass.getDeclaredFields.map(_.getName).mkString(","))
+      case Typed(appl@ Apply(a, b), tpt) => {
+        tpt.asInstanceOf[TypeTree].original match {
+          case Annotated(q"""new ProcessingInstance(purpose = $purp)""", arg) => {
+            println(
+              s"""
+                 |Data processing found in ${tree.pos.source}, line ${tree.pos.line}
+                 | >> $arg
+                 | Purpose: $purp
+              """.stripMargin)
+            annotatedApplies += appl
+          }
+        }
         super.transform(tree)
       }
-      case Apply(a, b) => {
-        println("apply")
+      case t@ Apply(a, b) if t.symbol.annotations.toString == "List(Processing)" => { // TODO: not nice!
+        if(!annotatedApplies.contains(t)) {
+          println(
+            s"""
+              |ERROR: Data processing found without purpose annotation in ${tree.pos.source}, line ${tree.pos.line}
+              | >> $t
+            """.stripMargin)
+          unit.error(tree.pos, "Unannotated data processing found")
+        }
         super.transform(tree)
       }
-      case _ => //println(showRaw(tree))
+      case _ => 
       super.transform(tree)
     }
   }

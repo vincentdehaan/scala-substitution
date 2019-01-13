@@ -21,6 +21,8 @@ object Repository {
 object DataProcessing extends App {
   val name = (Repository.getName("john@doe.com") : @ProcessingInstance(purpose = "Customer support")) + "a"
 
+val name3 = Repository.getName("john@doe.com")
+
   val name2 = Repository.getName("foo@bar.com")
   @wrapThisMethod def f = 1
 
