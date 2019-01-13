@@ -31,11 +31,11 @@ class CompilerPluginComponent(val global: Global)
     override def transform(tree: Tree) = tree match {
       case Typed(appl@ Apply(a, b), tpt) => {
         tpt.asInstanceOf[TypeTree].original match {
-          case Annotated(q"""new ProcessingInstance(purpose = $purp)""", arg) => {
+          case q"$expr: @ProcessingInstance(purpose = $purp)" => {
             println(
               s"""
                  |Data processing found in ${tree.pos.source}, line ${tree.pos.line}
-                 | >> $arg
+                 | >> $expr
                  | Purpose: $purp
               """.stripMargin)
             annotatedApplies += appl
@@ -50,11 +50,11 @@ class CompilerPluginComponent(val global: Global)
               |ERROR: Data processing found without purpose annotation in ${tree.pos.source}, line ${tree.pos.line}
               | >> $t
             """.stripMargin)
-          unit.error(tree.pos, "Unannotated data processing found")
+          global.reporter.error(tree.pos, "Unannotated data processing found")
         }
         super.transform(tree)
       }
-      case _ => 
+      case _ =>
       super.transform(tree)
     }
   }
